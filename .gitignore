@@ -13,11 +13,15 @@ runtime/shell/ios/build/
 runtime/shell/ios/Pods/
 runtime/shell/ios/Podfile.lock
 
-# Runtime generated files (created by iex run)
+# Generated files (created by iex run/build)
+runtime/shell/.iex-generated/
 runtime/shell/node_modules/
-runtime/shell/index.js
-runtime/shell/metro.config.js
-runtime/shell/_pages
+runtime/shell/App.tsx
+runtime/shell/App.js
+runtime/shell/main.jsbundle
+runtime/shell/assets/
+runtime/shell/ota-bundle.jsbundle
+runtime/shell/ios/.xcode.env.local
 
 # App build output
 apps/*/build/
@@ -29,5 +33,7 @@ apps/*/.watchmanconfig
 *.swp
 *~
 
-# Old CLI (replaced by Rust)
+# Old files (replaced)
 iexpo.sh
+runtime/shell/iex/
+runtime/shell/_pages

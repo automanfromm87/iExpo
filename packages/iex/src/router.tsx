@@ -1,10 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
-  SafeAreaView, StatusBar, Dimensions, Platform,
+  SafeAreaView, StatusBar, useWindowDimensions,
 } from 'react-native';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ─── Types ───
 
@@ -42,8 +41,13 @@ interface RouterProps {
 }
 
 export function Router({ routes }: RouterProps): React.JSX.Element {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const routeMap = useRef(new Map(routes.map(r => [r.path, r]))).current;
-  const tabRoutes = routes.filter(r => r.path === '/' || (r.path.match(/\//g) || []).length === 1);
+  const tabRoutes = useMemo(
+    () => routes.filter(r => r.path === '/' || (r.path.match(/\//g) || []).length === 1),
+    [routes]
+  );
+  const tabSet = useMemo(() => new Set(tabRoutes.map(r => r.path)), [tabRoutes]);
 
   const [stack, setStack] = useState<string[]>(['/']);
   const [params, setParams] = useState<Record<string, Record<string, any>>>({});
@@ -56,7 +60,7 @@ export function Router({ routes }: RouterProps): React.JSX.Element {
       console.warn(`[iex] Route not found: ${path}`);
       return;
     }
-    const isTab = tabRoutes.some(r => r.path === path);
+    const isTab = tabSet.has(path);
     if (isTab) {
       setStack([path]);
       setParams(prev => ({ ...prev, [path]: navParams || {} }));
@@ -67,15 +71,18 @@ export function Router({ routes }: RouterProps): React.JSX.Element {
       setParams(prev => ({ ...prev, [path]: navParams || {} }));
       Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
     }
-  }, [routeMap, tabRoutes, slideAnim]);
+  }, [routeMap, tabSet, slideAnim, SCREEN_WIDTH]);
 
   const goBack = useCallback(() => {
-    if (stack.length <= 1) return;
-    Animated.timing(slideAnim, { toValue: SCREEN_WIDTH, duration: 220, useNativeDriver: true }).start(() => {
-      setStack(prev => prev.slice(0, -1));
-      slideAnim.setValue(0);
+    setStack(prev => {
+      if (prev.length <= 1) return prev;
+      Animated.timing(slideAnim, { toValue: SCREEN_WIDTH, duration: 220, useNativeDriver: true }).start(() => {
+        setStack(p => p.slice(0, -1));
+        slideAnim.setValue(0);
+      });
+      return prev;
     });
-  }, [stack.length, slideAnim]);
+  }, [slideAnim, SCREEN_WIDTH]);
 
   const currentRoute = routeMap.get(currentPath);
   const prevRoute = stack.length > 1 ? routeMap.get(stack[stack.length - 2]) : null;
@@ -87,7 +94,7 @@ export function Router({ routes }: RouterProps): React.JSX.Element {
   const CurrentPage = currentRoute.component;
   const PrevPage = prevRoute?.component;
   const canGoBack = stack.length > 1;
-  const isTabRoute = tabRoutes.some(r => r.path === currentPath);
+  const isTabRoute = tabSet.has(currentPath);
 
   return (
     <NavContext.Provider value={{ navigate, goBack, currentPath, params: params[currentPath] || {} }}>
