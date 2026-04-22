@@ -1,0 +1,33 @@
+# Build artifacts
+cli/target/
+bundled/target/
+bundled/bundles/
+
+# Node
+node_modules/
+package-lock.json
+
+# iOS build
+runtime/build/
+runtime/shell/ios/build/
+runtime/shell/ios/Pods/
+runtime/shell/ios/Podfile.lock
+
+# Runtime generated files (created by iex run)
+runtime/shell/node_modules/
+runtime/shell/index.js
+runtime/shell/metro.config.js
+runtime/shell/_pages
+
+# App build output
+apps/*/build/
+apps/*/node_modules/
+apps/*/.watchmanconfig
+
+# OS
+.DS_Store
+*.swp
+*~
+
+# Old CLI (replaced by Rust)
+iexpo.sh
