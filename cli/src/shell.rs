@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::paths::{shell_dir, build_dir};
+use crate::paths::{shell_dir, build_dir, RN_VERSION};
 use crate::util::{run_cmd, run_cmd_output};
 use crate::project::{copy_dir_all, sed_replace_in_dir};
 
@@ -16,16 +16,16 @@ pub fn ensure_shell() {
     println!("⚙️  Setting up shell (one-time)...");
     fs::create_dir_all(&shell).unwrap();
 
-    fs::write(shell.join("package.json"), r#"{
+    fs::write(shell.join("package.json"), format!(r#"{{
   "name": "iexpo-shell", "version": "1.0.0", "private": true,
-  "dependencies": {
+  "dependencies": {{
     "react": "^19.2.3",
-    "react-native": "0.85.2",
+    "react-native": "{RN_VERSION}",
     "@react-native-community/cli": "^20.1.3",
     "@react-native-community/cli-platform-ios": "^20.1.3",
-    "@react-native/metro-config": "0.85.2"
-  }
-}"#).unwrap();
+    "@react-native/metro-config": "{RN_VERSION}"
+  }}
+}}"#)).unwrap();
 
     fs::write(shell.join("app.json"), r#"{"name":"iExpoShell","displayName":"iExpo"}"#).unwrap();
     fs::write(shell.join(".watchmanconfig"), "{}").unwrap();
@@ -59,7 +59,8 @@ pub fn ensure_shell() {
     }
 
     println!("📱 Generating iOS project...");
-    run_cmd("npm", &["install", "@react-native-community/template@0.85.2", "--save-dev"], &shell);
+    let template = format!("@react-native-community/template@{RN_VERSION}");
+    run_cmd("npm", &["install", &template, "--save-dev"], &shell);
 
     let template_ios = shell.join("node_modules/@react-native-community/template/template/ios");
     if template_ios.exists() {

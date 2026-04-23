@@ -10,10 +10,9 @@ mod publish;
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
 
-use paths::{shell_dir, build_dir, apps_dir};
-use util::run_cmd;
+use paths::{shell_dir, build_dir, apps_dir, RN_VERSION};
+use util::{run_cmd, run_cmd_env};
 use project::require_project_dir;
 use shell::{ensure_shell, build_shell, install_app};
 use metro::configure_metro;
@@ -74,7 +73,7 @@ fn cmd_init(name: &str) {
         "main": "App.tsx",
         "devDependencies": {
             "@types/react": "^19.1.0",
-            "react-native": "0.85.2",
+            "react-native": RN_VERSION,
             "typescript": "^5.0.0"
         }
     });
@@ -118,24 +117,51 @@ fn start_metro() {
     println!();
 
     let shell = shell_dir();
-
-    let mut cmd = Command::new("npx");
-    cmd.args(["react-native", "start", "--port", "8081"])
-        .current_dir(&shell)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
+    let mut env: Vec<(&str, String)> = Vec::new();
 
     if let Some(bin_dir) = setup_watchman_shim() {
-        let path = format!(
-            "{}:{}",
-            bin_dir.display(),
-            std::env::var("PATH").unwrap_or_default()
-        );
-        cmd.env("PATH", path);
+        let path = format!("{}:{}", bin_dir.display(), std::env::var("PATH").unwrap_or_default());
+        env.push(("PATH", path));
     }
 
-    let _ = cmd.status();
+    let env_refs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (*k, v.as_str())).collect();
+    run_cmd_env("npx", &["react-native", "start", "--port", "8081"], &shell, &env_refs);
+}
+
+fn cmd_add(packages: &[String]) {
+    if packages.is_empty() {
+        eprintln!("Usage: iex add <package> [package...]");
+        std::process::exit(1);
+    }
+
+    let shell = shell_dir();
+    let ios_dir = shell.join("ios");
+
+    println!("📦 Installing {}...", packages.join(", "));
+    let mut args: Vec<&str> = vec!["install"];
+    args.extend(packages.iter().map(String::as_str));
+    if !run_cmd("npm", &args, &shell) {
+        eprintln!("❌ npm install failed");
+        std::process::exit(1);
+    }
+
+    if ios_dir.join("Podfile").exists() {
+        println!("📦 Running pod install...");
+        if !run_cmd("pod", &["install"], &ios_dir) {
+            eprintln!("❌ pod install failed");
+            std::process::exit(1);
+        }
+    }
+
+    let derived = build_dir().join("DerivedData");
+    if derived.exists() {
+        println!("🗑  Clearing build cache...");
+        let _ = fs::remove_dir_all(&derived);
+    }
+
+    println!();
+    println!("✅ Added: {}", packages.join(", "));
+    println!("   Run `iex run` to rebuild with the new native modules.");
 }
 
 fn main() {
@@ -166,43 +192,7 @@ fn main() {
             configure_metro(&cwd);
             println!("✅ Synced — Metro will reload automatically");
         }
-        Cmd::Add { packages } => {
-            if packages.is_empty() {
-                eprintln!("Usage: iex add <package> [package...]");
-                std::process::exit(1);
-            }
-
-            let shell = shell_dir();
-            let ios_dir = shell.join("ios");
-
-            println!("📦 Installing {}...", packages.join(", "));
-            let mut args = vec!["install"];
-            for p in &packages {
-                args.push(p);
-            }
-            if !run_cmd("npm", &args, &shell) {
-                eprintln!("❌ npm install failed");
-                std::process::exit(1);
-            }
-
-            if ios_dir.join("Podfile").exists() {
-                println!("📦 Running pod install...");
-                if !run_cmd("pod", &["install"], &ios_dir) {
-                    eprintln!("❌ pod install failed");
-                    std::process::exit(1);
-                }
-            }
-
-            let build = build_dir();
-            if build.join("DerivedData").exists() {
-                println!("🗑  Clearing build cache...");
-                let _ = fs::remove_dir_all(build.join("DerivedData"));
-            }
-
-            println!();
-            println!("✅ Added: {}", packages.join(", "));
-            println!("   Run `iex run` to rebuild with the new native modules.");
-        }
+        Cmd::Add { packages } => cmd_add(&packages),
         Cmd::Build { sim } => build::cmd_build(sim),
         Cmd::Publish { server, note } => publish::cmd_publish(&server, &note),
     }

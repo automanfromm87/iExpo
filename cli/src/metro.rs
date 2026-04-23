@@ -3,6 +3,7 @@ use std::path::Path;
 
 use crate::paths::{generated_dir, packages_dir, shell_dir};
 use crate::router::generate_router;
+use crate::util::write_if_changed;
 
 pub fn configure_metro(project_dir: &Path) {
     println!("📋 Configuring Metro to read from {}", project_dir.display());
@@ -24,17 +25,13 @@ pub fn configure_metro(project_dir: &Path) {
              AppRegistry.registerComponent('iExpoShell', () => App);\n",
             project_abs.display()
         );
-        let out = gen.join("index.generated.js");
-        if fs::read_to_string(&out).unwrap_or_default() != index_content {
-            fs::write(&out, index_content).expect("cannot write index.generated.js");
-        }
+        write_if_changed(&gen.join("index.generated.js"), &index_content);
     }
 
-    let watchman_config = project_abs.join(".watchmanconfig");
-    let wm_content = r#"{"ignore_dirs":["node_modules","build"]}"#;
-    if fs::read_to_string(&watchman_config).unwrap_or_default() != wm_content {
-        fs::write(&watchman_config, wm_content).expect("cannot write .watchmanconfig");
-    }
+    write_if_changed(
+        &project_abs.join(".watchmanconfig"),
+        r#"{"ignore_dirs":["node_modules","build"]}"#,
+    );
 
     let shell = shell_dir();
     let shell_abs = fs::canonicalize(&shell).unwrap_or(shell);
@@ -57,9 +54,5 @@ pub fn configure_metro(project_dir: &Path) {
         packages_iex.display(),
         packages_iex.display(),
     );
-    let metro_out = gen.join("metro.config.generated.js");
-    if fs::read_to_string(&metro_out).unwrap_or_default() != metro_content {
-        fs::write(&metro_out, metro_content).expect("cannot write metro.config.generated.js");
-    }
-
+    write_if_changed(&gen.join("metro.config.generated.js"), &metro_content);
 }

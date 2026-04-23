@@ -1,7 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-use serde_json;
+
+pub const RN_VERSION: &str = "0.85.2";
 
 static ROOT: OnceLock<PathBuf> = OnceLock::new();
 
@@ -27,5 +28,5 @@ pub fn rn_version() -> String {
             }
         }
     }
-    "0.85.2".to_string()
+    RN_VERSION.to_string()
 }

@@ -3,6 +3,7 @@ use std::path::Path;
 
 use crate::paths::generated_dir;
 use crate::project::is_js_file;
+use crate::util::write_if_changed;
 
 pub fn scan_pages(dir: &Path, prefix: &str) -> Vec<(String, String)> {
     let mut routes = Vec::new();
@@ -95,11 +96,5 @@ pub fn generate_router(project_abs: &Path) {
          AppRegistry.registerComponent('iExpoShell', () => App);\n"
     );
 
-    let out = gen.join("index.generated.js");
-    let existing = fs::read_to_string(&out).unwrap_or_default();
-    if existing != content {
-        fs::write(&out, content).expect("cannot write index.generated.js");
-    }
+    write_if_changed(&gen.join("index.generated.js"), &content);
 }
-
-

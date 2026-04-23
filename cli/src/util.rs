@@ -1,17 +1,28 @@
+use std::fs;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
 pub fn run_cmd(program: &str, args: &[&str], cwd: &Path) -> bool {
-    let status = Command::new(program)
-        .args(args)
+    run_cmd_env(program, args, cwd, &[])
+}
+
+pub fn run_cmd_env(program: &str, args: &[&str], cwd: &Path, env: &[(&str, &str)]) -> bool {
+    let mut cmd = Command::new(program);
+    cmd.args(args)
         .current_dir(cwd)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status();
-    match status {
+        .stderr(Stdio::inherit());
+    for (k, v) in env { cmd.env(k, v); }
+    match cmd.status() {
         Ok(s) => s.success(),
         Err(e) => { eprintln!("Failed to run {program}: {e}"); false }
+    }
+}
+
+pub fn write_if_changed(path: &Path, content: &str) {
+    if fs::read_to_string(path).unwrap_or_default() != content {
+        fs::write(path, content).unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
     }
 }
 
