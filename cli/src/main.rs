@@ -83,9 +83,6 @@ fn cmd_init(name: &str) {
     fs::write(dir.join("package.json"), serde_json::to_string_pretty(&pkg).unwrap())
         .expect("cannot write package.json");
 
-    fs::write(dir.join("app.json"), format!(r#"{{ "name": "{name}", "displayName": "{name}" }}"#))
-        .expect("cannot write app.json");
-
     fs::write(dir.join("iex.toml"), format!(
         "name = \"{name}\"\ndisplay_name = \"{name}\"\nbundle_id = \"com.iexpo.{name}\"\nport = 8081\n"
     )).expect("cannot write iex.toml");
