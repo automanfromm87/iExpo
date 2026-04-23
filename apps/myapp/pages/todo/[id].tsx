@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, usePageFocus, usePageBlur } from 'iex/router';
-import clipboard from 'iex/clipboard';
+import Clipboard from 'react-native/Libraries/Components/Clipboard/Clipboard';
 
 export const meta = { title: 'Task Detail', headerShown: true };
 
@@ -17,7 +17,7 @@ export default function TodoDetail(): React.JSX.Element {
   });
 
   const handleCopy = async () => {
-    clipboard.setString(`Task #${params.id}`);
+    Clipboard.setString(`Task #${params.id}`);
     Alert.alert('Copied', `"Task #${params.id}" copied to clipboard`);
   };
 
