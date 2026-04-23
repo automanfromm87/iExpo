@@ -34,7 +34,7 @@ export default function TodoDetail(): React.JSX.Element {
 
       <Text style={styles.hint}>
         Dynamic route: /todo/:id{'\n'}
-        Uses usePageFocus, usePageBlur, and iex/clipboard
+        Uses usePageFocus, usePageBlur, and Clipboard API
       </Text>
     </View>
   );
