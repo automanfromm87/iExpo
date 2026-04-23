@@ -18,6 +18,7 @@ use project::require_project_dir;
 use shell::{ensure_shell, build_shell, install_app};
 use metro::configure_metro;
 use config::load_config;
+use router::watch_pages;
 
 #[derive(Parser)]
 #[command(name = "iex", about = "iExpo — Instant React Native development")]
@@ -193,6 +194,7 @@ fn main() {
                 }
             }
 
+            watch_pages(fs::canonicalize(&cwd).unwrap(), cfg.name.clone());
             start_metro(cfg);
         }
         Cmd::Sync => {

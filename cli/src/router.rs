@@ -1,5 +1,8 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc;
+
+use notify::{EventKind, RecursiveMode, Watcher};
 
 use crate::paths::generated_dir;
 use crate::project::is_js_file;
@@ -97,4 +100,32 @@ pub fn generate_router(project_abs: &Path, app_name: &str) {
     );
 
     write_if_changed(&gen.join("index.generated.js"), &content);
+}
+
+pub fn watch_pages(project_dir: PathBuf, app_name: String) {
+    let pages_dir = project_dir.join("pages");
+    if !pages_dir.is_dir() { return; }
+
+    std::thread::spawn(move || {
+        let (tx, rx) = mpsc::channel();
+        let mut watcher = notify::recommended_watcher(move |res: Result<notify::Event, _>| {
+            if let Ok(event) = res {
+                match event.kind {
+                    EventKind::Create(_) | EventKind::Remove(_) => { let _ = tx.send(()); }
+                    _ => {}
+                }
+            }
+        }).expect("cannot start file watcher");
+
+        watcher.watch(&pages_dir, RecursiveMode::Recursive).expect("cannot watch pages/");
+
+        while rx.recv().is_ok() {
+            while rx.try_recv().is_ok() {}
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            while rx.try_recv().is_ok() {}
+
+            println!("📂 Pages changed — regenerating routes...");
+            generate_router(&project_dir, &app_name);
+        }
+    });
 }
