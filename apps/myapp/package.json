@@ -1,17 +1,14 @@
 {
   "name": "myapp",
   "version": "1.0.0",
-  "main": "App.js",
+  "main": "App.tsx",
   "scripts": {
-    "start": "iexpo start",
-    "run": "iexpo run"
-  },
-  "dependencies": {
-    "react": "^18.2.0"
+    "start": "iex run --no-build",
+    "run": "iex run"
   },
   "devDependencies": {
-    "@types/react": "^18.3.28",
-    "react-native": "^0.76.9",
+    "@types/react": "^19.1.0",
+    "react-native": "0.85.2",
     "typescript": "^5.9.3"
   }
 }
