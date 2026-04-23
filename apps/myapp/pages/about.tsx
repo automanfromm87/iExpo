@@ -1,65 +1,76 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { usePageFocus, usePageBlur } from 'iex/router';
 
-export const icon = 'i';
+export const meta = { title: 'About', icon: 'i', tab: true, tabOrder: 1 };
 
 export default function About(): React.JSX.Element {
+  const [visits, setVisits] = useState(0);
+
+  usePageFocus(() => {
+    setVisits(v => v + 1);
+    console.log('[About] focused');
+  });
+
+  usePageBlur(() => {
+    console.log('[About] blurred');
+  });
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>What is iExpo?</Text>
-        <Text style={styles.body}>
-          A minimal Expo-like development tool built entirely from scratch. It lets you write React Native apps with just TypeScript — no Xcode knowledge needed.
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>iExpo Framework</Text>
+        <Text style={styles.cardDesc}>
+          A lightweight React Native development tool with file-system routing, layout support, and dynamic routes.
         </Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Architecture</Text>
-        {[
-          { label: 'CLI', color: '#FF3B30', desc: 'Rust binary — fast project setup and dev server management' },
-          { label: 'RT', color: '#007AFF', desc: 'Pre-built iOS shell app with Hermes JS engine' },
-          { label: 'Metro', color: '#FF9500', desc: 'Bundles your JS and pushes hot updates via WebSocket' },
-          { label: 'Router', color: '#5856D6', desc: 'File-system routing — add a file, get a route' },
-        ].map((item, i) => (
-          <View key={i} style={styles.archRow}>
-            <View style={[styles.badge, { backgroundColor: item.color }]}>
-              <Text style={styles.badgeText}>{item.label}</Text>
-            </View>
-            <Text style={styles.archDesc}>{item.desc}</Text>
-          </View>
-        ))}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Lifecycle Demo</Text>
+        <Text style={styles.cardDesc}>
+          This page uses usePageFocus and usePageBlur hooks.
+        </Text>
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>Visits: {visits}</Text>
+        </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tech Stack</Text>
-        <View style={styles.tags}>
-          {['React Native', 'Hermes', 'Metro', 'TypeScript', 'Rust', 'Xcode'].map(t => (
-            <View key={t} style={styles.tag}>
-              <Text style={styles.tagText}>{t}</Text>
-            </View>
-          ))}
-        </View>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Features</Text>
+        {[
+          'File-system routing (pages/)',
+          'Layout system (_layout.tsx)',
+          'Dynamic routes ([id].tsx)',
+          'Explicit tab declaration (meta.tab)',
+          'Page metadata (meta.title, icon, ...)',
+          'Lifecycle hooks (usePageFocus, usePageBlur)',
+        ].map((f, i) => (
+          <View key={i} style={styles.featureRow}>
+            <Text style={styles.check}>✓</Text>
+            <Text style={styles.featureText}>{f}</Text>
+          </View>
+        ))}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#f2f2f7' },
-  container: { padding: 20, paddingBottom: 40 },
-  section: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 12,
+  scroll: { flex: 1 },
+  container: { padding: 20, paddingBottom: 40, gap: 12 },
+  card: {
+    backgroundColor: '#fff', borderRadius: 16, padding: 20,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
-  sectionTitle: { fontSize: 20, fontWeight: '700', marginBottom: 12 },
-  body: { fontSize: 15, color: '#444', lineHeight: 22 },
-  archRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  cardTitle: { fontSize: 17, fontWeight: '600', marginBottom: 6 },
+  cardDesc: { fontSize: 14, color: '#666', lineHeight: 20 },
   badge: {
-    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
-    marginRight: 12, minWidth: 56, alignItems: 'center',
+    marginTop: 12, alignSelf: 'flex-start',
+    backgroundColor: '#007AFF', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6,
   },
-  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  archDesc: { fontSize: 14, color: '#555', flex: 1, lineHeight: 20, paddingTop: 2 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tag: { backgroundColor: '#f0f0f5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  tagText: { fontSize: 13, color: '#555', fontWeight: '500' },
+  badgeText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  featureRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  check: { fontSize: 14, color: '#34c759', marginRight: 8, fontWeight: '700' },
+  featureText: { fontSize: 14, color: '#333' },
 });

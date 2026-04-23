@@ -1,10 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { Link } from 'iex/router';
+import { Link, usePageFocus } from 'iex/router';
 
-export const icon = 'H';
+export const meta = { title: 'Home', icon: 'H', tab: true, tabOrder: 0 };
+
+const products = [
+  { id: '1', name: 'React Native', color: '#61dafb' },
+  { id: '2', name: 'TypeScript', color: '#3178c6' },
+  { id: '3', name: 'Expo Modules', color: '#000020' },
+];
 
 export default function Home(): React.JSX.Element {
+  usePageFocus(() => {
+    console.log('[Home] focused');
+  });
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <View style={styles.hero}>
@@ -15,80 +25,46 @@ export default function Home(): React.JSX.Element {
         <Text style={styles.subtitle}>Instant React Native Development</Text>
       </View>
 
-      <View style={styles.cards}>
-        <FeatureCard
-          color="#5856D6"
-          label="R"
-          title="File-System Routing"
-          desc="Add a file to pages/ and it becomes a route automatically."
-        />
-        <FeatureCard
-          color="#FF9500"
-          label="H"
-          title="Hot Reload"
-          desc="Edit any file, save, and see changes instantly on device."
-        />
-        <FeatureCard
-          color="#007AFF"
-          label="T"
-          title="TypeScript"
-          desc="Full TypeScript support with zero configuration."
-        />
-      </View>
+      <Text style={styles.section}>Dynamic Routes</Text>
+      {products.map(p => (
+        <Link key={p.id} to={`/product/${p.id}`} style={styles.productCard}>
+          <View style={styles.productRow}>
+            <View style={[styles.dot, { backgroundColor: p.color }]} />
+            <Text style={styles.productName}>{p.name}</Text>
+            <Text style={styles.arrow}>›</Text>
+          </View>
+        </Link>
+      ))}
 
+      <Text style={styles.section}>Navigation</Text>
       <Link to="/about" style={styles.linkCard}>
-        <View style={styles.linkRow}>
-          <Text style={styles.linkLabel}>Learn more about iExpo</Text>
-          <Text style={styles.linkArrow}>›</Text>
+        <View style={styles.productRow}>
+          <Text style={styles.linkLabel}>About iExpo</Text>
+          <Text style={styles.arrow}>›</Text>
         </View>
       </Link>
     </ScrollView>
   );
 }
 
-function FeatureCard({ color, label, title, desc }: {
-  color: string; label: string; title: string; desc: string;
-}): React.JSX.Element {
-  return (
-    <View style={styles.card}>
-      <View style={[styles.cardBadge, { backgroundColor: color }]}>
-        <Text style={styles.cardBadgeText}>{label}</Text>
-      </View>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.cardDesc}>{desc}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#f2f2f7' },
+  scroll: { flex: 1 },
   container: { padding: 20, paddingBottom: 40 },
-  hero: { alignItems: 'center', paddingVertical: 32, borderRadius: 20, marginBottom: 8 },
+  hero: { alignItems: 'center', paddingVertical: 28 },
   logoBox: {
-    width: 64, height: 64, borderRadius: 16,
+    width: 56, height: 56, borderRadius: 14,
     backgroundColor: '#007AFF', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  logoText: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  title: { fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, color: '#8e8e93', marginTop: 4 },
-  cards: { gap: 12, marginTop: 8 },
-  card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 20,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  cardBadge: {
-    width: 36, height: 36, borderRadius: 10,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 10,
-  },
-  cardBadgeText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  cardTitle: { fontSize: 17, fontWeight: '600', marginBottom: 4 },
-  cardDesc: { fontSize: 14, color: '#666', lineHeight: 20 },
-  linkCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginTop: 12,
-  },
-  linkRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  linkLabel: { fontSize: 16, color: '#007AFF', fontWeight: '500' },
-  linkArrow: { fontSize: 22, color: '#007AFF', fontWeight: '300' },
+  logoText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: '#8e8e93', marginTop: 2 },
+  section: { fontSize: 13, fontWeight: '600', color: '#8e8e93', marginTop: 20, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  productCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 8 },
+  productRow: { flexDirection: 'row', alignItems: 'center' },
+  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
+  productName: { flex: 1, fontSize: 16, fontWeight: '500' },
+  arrow: { fontSize: 20, color: '#c7c7cc', fontWeight: '300' },
+  linkCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16 },
+  linkLabel: { flex: 1, fontSize: 16, color: '#007AFF', fontWeight: '500' },
 });

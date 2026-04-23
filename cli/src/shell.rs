@@ -24,7 +24,7 @@ pub fn ensure_shell(cfg: &IexConfig) {
     fs::write(shell.join("package.json"), format!(r#"{{
   "name": "iexpo-shell", "version": "1.0.0", "private": true,
   "dependencies": {{
-    "react": "^19.2.3",
+    "react": "19.2.3",
     "react-native": "{RN_VERSION}",
     "@react-native-community/cli": "^20.1.3",
     "@react-native-community/cli-platform-ios": "^20.1.3",
