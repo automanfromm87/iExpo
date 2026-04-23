@@ -1,17 +1,22 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::config::IexConfig;
 use crate::paths::{shell_dir, build_dir, RN_VERSION};
 use crate::util::{run_cmd, run_cmd_output};
 use crate::project::{copy_dir_all, sed_replace_in_dir};
 
-pub fn ensure_shell() {
+pub fn ensure_shell(cfg: &IexConfig) {
     let shell = shell_dir();
     if shell.join("node_modules").join("react-native").exists() {
         println!("✅ Shell exists");
         ensure_entry_points(&shell);
         return;
     }
+
+    let name = &cfg.name;
+    let name_lower = name.to_lowercase();
+    let display = &cfg.display_name;
 
     println!("⚙️  Setting up shell (one-time)...");
     fs::create_dir_all(&shell).unwrap();
@@ -27,7 +32,8 @@ pub fn ensure_shell() {
   }}
 }}"#)).unwrap();
 
-    fs::write(shell.join("app.json"), r#"{"name":"iExpoShell","displayName":"iExpo"}"#).unwrap();
+    fs::write(shell.join("app.json"),
+        format!(r#"{{"name":"{name}","displayName":"{display}"}}"#)).unwrap();
     fs::write(shell.join(".watchmanconfig"), "{}").unwrap();
 
     fs::write(shell.join("tsconfig.json"), r#"{
@@ -69,21 +75,24 @@ pub fn ensure_shell() {
 
     let ios_dir = shell.join("ios");
     if ios_dir.exists() {
-        sed_replace_in_dir(&ios_dir, &[("HelloWorld", "iExpoShell"), ("helloworld", "iexposhell")]);
+        sed_replace_in_dir(&ios_dir, &[
+            ("HelloWorld", name),
+            ("helloworld", &name_lower),
+        ]);
 
         for (from, to) in [
-            ("HelloWorld.xcodeproj", "iExpoShell.xcodeproj"),
-            ("HelloWorld", "iExpoShell"),
-            ("HelloWorldTests", "iExpoShellTests"),
+            ("HelloWorld.xcodeproj", &format!("{name}.xcodeproj")),
+            ("HelloWorld", name),
+            ("HelloWorldTests", &format!("{name}Tests")),
         ] {
             let src = ios_dir.join(from);
             if src.exists() { let _ = fs::rename(&src, ios_dir.join(to)); }
         }
 
         let scheme_file = ios_dir
-            .join("iExpoShell.xcodeproj/xcshareddata/xcschemes/HelloWorld.xcscheme");
+            .join(format!("{name}.xcodeproj/xcshareddata/xcschemes/HelloWorld.xcscheme"));
         if scheme_file.exists() {
-            let _ = fs::rename(&scheme_file, scheme_file.with_file_name("iExpoShell.xcscheme"));
+            let _ = fs::rename(&scheme_file, scheme_file.with_file_name(format!("{name}.xcscheme")));
         }
 
         println!("📦 pod install...");
@@ -110,10 +119,11 @@ fn ensure_entry_points(shell: &Path) {
     }
 }
 
-pub fn build_shell() -> Option<PathBuf> {
+pub fn build_shell(cfg: &IexConfig) -> Option<PathBuf> {
     let build = build_dir();
+    let name = &cfg.name;
 
-    if let Some(app_path) = find_app(&build, "Debug-iphonesimulator") {
+    if let Some(app_path) = find_app(&build, "Debug-iphonesimulator", name) {
         println!("✅ Using cached shell app");
         return Some(app_path);
     }
@@ -122,12 +132,12 @@ pub fn build_shell() -> Option<PathBuf> {
     fs::create_dir_all(&build).unwrap();
 
     let shell = shell_dir();
-    let workspace = shell.join("ios/iExpoShell.xcworkspace");
+    let workspace = shell.join(format!("ios/{name}.xcworkspace"));
     let derived = build.join("DerivedData");
 
     let success = run_cmd("xcodebuild", &[
         "-workspace", workspace.to_str().unwrap(),
-        "-scheme", "iExpoShell",
+        "-scheme", name,
         "-configuration", "Debug",
         "-destination", "platform=iOS Simulator,name=iPhone 17 Pro",
         "-derivedDataPath", derived.to_str().unwrap(),
@@ -135,14 +145,15 @@ pub fn build_shell() -> Option<PathBuf> {
     ], &shell);
 
     if !success { eprintln!("❌ Build failed"); return None; }
-    find_app(&build, "Debug-iphonesimulator")
+    find_app(&build, "Debug-iphonesimulator", name)
 }
 
-pub fn find_app(dir: &Path, config_suffix: &str) -> Option<PathBuf> {
+pub fn find_app(dir: &Path, config_suffix: &str, name: &str) -> Option<PathBuf> {
+    let app_name = format!("{name}.app");
     for entry in fs::read_dir(dir).ok()?.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            if entry.file_name() == "iExpoShell.app"
+            if entry.file_name().to_string_lossy() == app_name
                 && path.parent().map_or(false, |p| {
                     p.file_name().map_or(false, |n| n.to_string_lossy().contains(config_suffix))
                 })
@@ -150,13 +161,13 @@ pub fn find_app(dir: &Path, config_suffix: &str) -> Option<PathBuf> {
             {
                 return Some(path);
             }
-            if let Some(found) = find_app(&path, config_suffix) { return Some(found); }
+            if let Some(found) = find_app(&path, config_suffix, name) { return Some(found); }
         }
     }
     None
 }
 
-pub fn install_app(app_path: &Path) {
+pub fn install_app(app_path: &Path, cfg: &IexConfig) {
     println!("📱 Installing on simulator...");
     let dot = PathBuf::from(".");
 
@@ -178,7 +189,7 @@ pub fn install_app(app_path: &Path) {
 
     let bundle_id = run_cmd_output("defaults", &[
         "read", &format!("{}/Info.plist", app_path.display()), "CFBundleIdentifier"
-    ], &dot).unwrap_or_else(|| "org.reactjs.native.example.iExpoShell".to_string());
+    ], &dot).unwrap_or_else(|| cfg.bundle_id.clone());
 
     run_cmd("xcrun", &["simctl", "launch", "booted", &bundle_id], &dot);
     println!("✅ App launched");

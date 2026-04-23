@@ -1,5 +1,6 @@
 use std::fs;
 
+use crate::config::load_config;
 use crate::paths::{shell_dir, build_dir};
 use crate::util::{run_cmd, bundle_js};
 use crate::project::{require_project_dir, copy_dir_all};
@@ -8,13 +9,15 @@ use crate::metro::configure_metro;
 
 pub fn cmd_build(sim: bool) {
     let cwd = require_project_dir();
+    let cfg = load_config(&cwd);
+    let name = &cfg.name;
 
     println!();
     println!("📦 iExpo Build");
     println!();
 
-    ensure_shell();
-    configure_metro(&cwd);
+    ensure_shell(cfg);
+    configure_metro(&cwd, cfg);
 
     let shell = shell_dir();
     let build = build_dir();
@@ -27,7 +30,7 @@ pub fn cmd_build(sim: bool) {
     println!("   ✅ Bundle created");
 
     println!("2/4 Embedding bundle into app...");
-    let ios_resources = shell.join("ios/iExpoShell");
+    let ios_resources = shell.join(format!("ios/{name}"));
     fs::copy(&bundle_path, ios_resources.join("main.jsbundle")).expect("cannot copy jsbundle");
     if assets_dir.exists() {
         let dest_assets = ios_resources.join("assets");
@@ -46,9 +49,10 @@ pub fn cmd_build(sim: bool) {
         ("generic/platform=iOS", "iphoneos")
     };
 
+    let workspace = shell.join(format!("ios/{name}.xcworkspace"));
     let build_ok = run_cmd("xcodebuild", &[
-        "-workspace", shell.join("ios/iExpoShell.xcworkspace").to_str().unwrap(),
-        "-scheme", "iExpoShell",
+        "-workspace", workspace.to_str().unwrap(),
+        "-scheme", name,
         "-configuration", "Release",
         "-destination", destination,
         "-derivedDataPath", derived.to_str().unwrap(),
@@ -62,11 +66,12 @@ pub fn cmd_build(sim: bool) {
 
     println!("4/4 Packaging...");
     let search_dir = format!("Release-{config_suffix}");
-    match find_app(&derived, &search_dir) {
-        Some(app) => {
-            let dest_app = output_dir.join("iExpoShell.app");
+    let app_name = format!("{name}.app");
+    match find_app(&derived, &search_dir, name) {
+        Some(ref app) => {
+            let dest_app = output_dir.join(&app_name);
             if dest_app.exists() { let _ = fs::remove_dir_all(&dest_app); }
-            copy_dir_all(&app, &dest_app).unwrap();
+            copy_dir_all(app, &dest_app).unwrap();
 
             println!();
             println!("✅ Build complete!");
@@ -74,11 +79,7 @@ pub fn cmd_build(sim: bool) {
             if sim {
                 println!();
                 println!("   Install on simulator:");
-                println!("   xcrun simctl install booted build/iExpoShell.app");
-            } else {
-                println!();
-                println!("   To create .ipa for App Store, use:");
-                println!("   xcodebuild -exportArchive ...");
+                println!("   xcrun simctl install booted build/{app_name}");
             }
         }
         None => {

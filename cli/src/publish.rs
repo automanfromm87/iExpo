@@ -1,6 +1,7 @@
 use std::fs;
 use std::process::Command;
 
+use crate::config::load_config;
 use crate::paths::{shell_dir, rn_version};
 use crate::util::bundle_js;
 use crate::project::require_project_dir;
@@ -9,13 +10,14 @@ use crate::metro::configure_metro;
 
 pub fn cmd_publish(server: &str, note: &str) {
     let cwd = require_project_dir();
+    let cfg = load_config(&cwd);
 
     println!();
     println!("🚀 iExpo Publish");
     println!();
 
-    ensure_shell();
-    configure_metro(&cwd);
+    ensure_shell(cfg);
+    configure_metro(&cwd, cfg);
 
     let shell = shell_dir();
 

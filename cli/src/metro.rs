@@ -1,11 +1,12 @@
 use std::fs;
 use std::path::Path;
 
+use crate::config::IexConfig;
 use crate::paths::{generated_dir, packages_dir, shell_dir};
 use crate::router::generate_router;
 use crate::util::write_if_changed;
 
-pub fn configure_metro(project_dir: &Path) {
+pub fn configure_metro(project_dir: &Path, cfg: &IexConfig) {
     println!("📋 Configuring Metro to read from {}", project_dir.display());
     let gen = generated_dir();
     let project_abs = fs::canonicalize(project_dir).expect("cannot resolve project path");
@@ -17,13 +18,14 @@ pub fn configure_metro(project_dir: &Path) {
 
     if has_pages {
         println!("📂 Detected pages/ directory — enabling file-system routing");
-        generate_router(&project_abs);
+        generate_router(&project_abs, &cfg.name);
     } else {
         let index_content = format!(
             "import {{ AppRegistry }} from 'react-native';\n\
              import App from '{}/App';\n\
-             AppRegistry.registerComponent('iExpoShell', () => App);\n",
-            project_abs.display()
+             AppRegistry.registerComponent('{}', () => App);\n",
+            project_abs.display(),
+            cfg.name,
         );
         write_if_changed(&gen.join("index.generated.js"), &index_content);
     }

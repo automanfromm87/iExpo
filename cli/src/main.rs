@@ -1,5 +1,6 @@
 mod paths;
 mod util;
+mod config;
 mod project;
 mod shell;
 mod router;
@@ -16,6 +17,7 @@ use util::{run_cmd, run_cmd_env};
 use project::require_project_dir;
 use shell::{ensure_shell, build_shell, install_app};
 use metro::configure_metro;
+use config::load_config;
 
 #[derive(Parser)]
 #[command(name = "iex", about = "iExpo — Instant React Native development")]
@@ -83,6 +85,10 @@ fn cmd_init(name: &str) {
     fs::write(dir.join("app.json"), format!(r#"{{ "name": "{name}", "displayName": "{name}" }}"#))
         .expect("cannot write app.json");
 
+    fs::write(dir.join("iex.toml"), format!(
+        "name = \"{name}\"\ndisplay_name = \"{name}\"\nbundle_id = \"com.iexpo.{name}\"\nport = 8081\n"
+    )).expect("cannot write iex.toml");
+
     println!("📦 Installing type definitions...");
     run_cmd("npm", &["install"], &dir);
 
@@ -110,13 +116,14 @@ fn setup_watchman_shim() -> Option<PathBuf> {
     Some(bin_dir)
 }
 
-fn start_metro() {
+fn start_metro(cfg: &config::IexConfig) {
     println!();
     println!("🔥 Starting Metro dev server...");
     println!("   Edit any file → save → see changes instantly!");
     println!();
 
     let shell = shell_dir();
+    let port = cfg.port.to_string();
     let mut env: Vec<(&str, String)> = Vec::new();
 
     if let Some(bin_dir) = setup_watchman_shim() {
@@ -125,7 +132,7 @@ fn start_metro() {
     }
 
     let env_refs: Vec<(&str, &str)> = env.iter().map(|(k, v)| (*k, v.as_str())).collect();
-    run_cmd_env("npx", &["react-native", "start", "--port", "8081"], &shell, &env_refs);
+    run_cmd_env("npx", &["react-native", "start", "--port", &port], &shell, &env_refs);
 }
 
 fn cmd_add(packages: &[String]) {
@@ -170,26 +177,28 @@ fn main() {
         Cmd::Init { name } => cmd_init(&name),
         Cmd::Run { no_build } => {
             let cwd = require_project_dir();
+            let cfg = load_config(&cwd);
 
             println!();
             println!("🚀 iExpo Run");
             println!();
 
-            ensure_shell();
-            configure_metro(&cwd);
+            ensure_shell(cfg);
+            configure_metro(&cwd, cfg);
 
             if !no_build {
-                match build_shell() {
-                    Some(app_path) => install_app(&app_path),
+                match build_shell(cfg) {
+                    Some(app_path) => install_app(&app_path, cfg),
                     None => std::process::exit(1),
                 }
             }
 
-            start_metro();
+            start_metro(cfg);
         }
         Cmd::Sync => {
             let cwd = require_project_dir();
-            configure_metro(&cwd);
+            let cfg = load_config(&cwd);
+            configure_metro(&cwd, cfg);
             println!("✅ Synced — Metro will reload automatically");
         }
         Cmd::Add { packages } => cmd_add(&packages),

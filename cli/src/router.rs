@@ -57,7 +57,7 @@ fn default_icon(path: &str) -> &str {
     }
 }
 
-pub fn generate_router(project_abs: &Path) {
+pub fn generate_router(project_abs: &Path, app_name: &str) {
     let gen = generated_dir();
     fs::create_dir_all(&gen).unwrap();
 
@@ -93,7 +93,7 @@ pub fn generate_router(project_abs: &Path) {
          {imports}\n\
          const routes = [\n{route_entries}];\n\n\
          function App() {{ return <Router routes={{routes}} />; }}\n\n\
-         AppRegistry.registerComponent('iExpoShell', () => App);\n"
+         AppRegistry.registerComponent('{app_name}', () => App);\n",
     );
 
     write_if_changed(&gen.join("index.generated.js"), &content);

@@ -1,0 +1,4 @@
+name = "iExpoShell"
+display_name = "iExpo"
+bundle_id = "org.reactjs.native.example.iExpoShell"
+port = 8081
