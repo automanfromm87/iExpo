@@ -1,6 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::path::Path;
 
 use crate::paths::generated_dir;
 use crate::project::is_js_file;
@@ -96,43 +95,10 @@ pub fn generate_router(project_abs: &Path) {
          AppRegistry.registerComponent('iExpoShell', () => App);\n"
     );
 
-    fs::write(gen.join("index.generated.js"), content).expect("cannot write index.generated.js");
-}
-
-pub fn watch_pages(project_dir: PathBuf) {
-    let pages_dir = project_dir.join("pages");
-    if !pages_dir.is_dir() { return; }
-
-    std::thread::spawn(move || {
-        let mut last_snapshot = snapshot_dir(&pages_dir);
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            let current = snapshot_dir(&pages_dir);
-            if current != last_snapshot {
-                println!("📂 Pages changed — regenerating routes...");
-                generate_router(&project_dir);
-                last_snapshot = current;
-            }
-        }
-    });
-}
-
-fn snapshot_dir(dir: &Path) -> Vec<(String, SystemTime)> {
-    let mut files = Vec::new();
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let name = entry.file_name().to_string_lossy().to_string();
-            if path.is_dir() && name != "node_modules" {
-                files.extend(snapshot_dir(&path));
-            } else if is_js_file(&name) {
-                let modified = fs::metadata(&path)
-                    .and_then(|m| m.modified())
-                    .unwrap_or(SystemTime::UNIX_EPOCH);
-                files.push((path.to_string_lossy().to_string(), modified));
-            }
-        }
+    let out = gen.join("index.generated.js");
+    let existing = fs::read_to_string(&out).unwrap_or_default();
+    if existing != content {
+        fs::write(&out, content).expect("cannot write index.generated.js");
     }
-    files.sort_by(|a, b| a.0.cmp(&b.0));
-    files
 }
+

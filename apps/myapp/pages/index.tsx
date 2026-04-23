@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'iex/router';
 
 export const icon = 'H';
@@ -7,13 +8,16 @@ export const icon = 'H';
 export default function Home(): React.JSX.Element {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <View style={styles.hero}>
+      <LinearGradient
+        colors={['#4c669f', '#3b5998', '#192f6a']}
+        style={styles.hero}
+      >
         <View style={styles.logoBox}>
           <Text style={styles.logoText}>iEx</Text>
         </View>
-        <Text style={styles.title}>iExpo</Text>
-        <Text style={styles.subtitle}>Instant React Native Development</Text>
-      </View>
+        <Text style={[styles.title, { color: '#fff' }]}>iExpo</Text>
+        <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.7)' }]}>Instant React Native Development</Text>
+      </LinearGradient>
 
       <View style={styles.cards}>
         <FeatureCard
@@ -63,7 +67,7 @@ function FeatureCard({ color, label, title, desc }: {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#f2f2f7' },
   container: { padding: 20, paddingBottom: 40 },
-  hero: { alignItems: 'center', paddingVertical: 32 },
+  hero: { alignItems: 'center', paddingVertical: 32, borderRadius: 20, marginBottom: 8 },
   logoBox: {
     width: 64, height: 64, borderRadius: 16,
     backgroundColor: '#007AFF', justifyContent: 'center', alignItems: 'center',

@@ -47,6 +47,9 @@ pub fn ensure_shell() {
   "exclude": ["node_modules"]
 }"#).unwrap();
 
+    fs::write(shell.join("babel.config.js"),
+        "module.exports = { presets: ['module:@react-native/babel-preset'] };\n").unwrap();
+
     ensure_entry_points(&shell);
 
     println!("📦 npm install...");
@@ -92,6 +95,11 @@ fn ensure_entry_points(shell: &Path) {
     let metro = shell.join("metro.config.js");
     if !metro.exists() {
         fs::write(&metro, "module.exports = require('./.iex-generated/metro.config.generated.js');\n").unwrap();
+    }
+
+    let babel = shell.join("babel.config.js");
+    if !babel.exists() {
+        fs::write(&babel, "module.exports = { presets: ['module:@react-native/babel-preset'] };\n").unwrap();
     }
 }
 

@@ -15,7 +15,6 @@ use util::run_cmd;
 use project::require_project_dir;
 use shell::{ensure_shell, build_shell, install_app};
 use metro::configure_metro;
-use router::watch_pages;
 
 #[derive(Parser)]
 #[command(name = "iex", about = "iExpo — Instant React Native development")]
@@ -33,6 +32,8 @@ enum Cmd {
         #[arg(long)]
         no_build: bool,
     },
+    /// Regenerate routes + metro config (while `iex run` is running)
+    Sync,
     /// Bundle JS + compile Release .app / .ipa
     Build {
         #[arg(long, help = "Build for Simulator instead of device")]
@@ -114,8 +115,12 @@ fn main() {
                 }
             }
 
-            watch_pages(fs::canonicalize(&cwd).unwrap());
             start_metro();
+        }
+        Cmd::Sync => {
+            let cwd = require_project_dir();
+            configure_metro(&cwd);
+            println!("✅ Synced — Metro will reload automatically");
         }
         Cmd::Build { sim } => build::cmd_build(sim),
         Cmd::Publish { server, note } => publish::cmd_publish(&server, &note),

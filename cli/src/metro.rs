@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::paths::{generated_dir, packages_dir};
+use crate::paths::{generated_dir, packages_dir, shell_dir};
 use crate::router::generate_router;
 
 pub fn configure_metro(project_dir: &Path) {
@@ -24,30 +24,43 @@ pub fn configure_metro(project_dir: &Path) {
              AppRegistry.registerComponent('iExpoShell', () => App);\n",
             project_abs.display()
         );
-        fs::write(gen.join("index.generated.js"), index_content).expect("cannot write index.generated.js");
+        let out = gen.join("index.generated.js");
+        if fs::read_to_string(&out).unwrap_or_default() != index_content {
+            fs::write(&out, index_content).expect("cannot write index.generated.js");
+        }
     }
 
     let watchman_config = project_abs.join(".watchmanconfig");
-    if !watchman_config.exists() {
-        fs::write(&watchman_config, "{}").expect("cannot write .watchmanconfig");
-    }
+    fs::write(&watchman_config, r#"{"ignore_dirs":["node_modules","build"]}"#)
+        .expect("cannot write .watchmanconfig");
 
+    let shell = shell_dir();
+    let shell_abs = fs::canonicalize(&shell).unwrap_or(shell);
     let metro_content = format!(
         "const {{getDefaultConfig, mergeConfig}} = require('@react-native/metro-config');\n\
          const path = require('path');\n\
          const exclusionList = require('metro-config/src/defaults/exclusionList');\n\
-         module.exports = mergeConfig(getDefaultConfig(__dirname), {{\n\
+         const shellDir = '{}';\n\
+         module.exports = mergeConfig(getDefaultConfig(shellDir), {{\n\
          \x20 watchFolders: ['{}', '{}'],\n\
          \x20 resolver: {{\n\
-         \x20\x20\x20 nodeModulesPaths: [path.resolve(__dirname, 'node_modules')],\n\
+         \x20\x20\x20 nodeModulesPaths: [path.resolve(shellDir, 'node_modules')],\n\
          \x20\x20\x20 blockList: exclusionList([/apps\\/.*\\/node_modules\\/.*/]),\n\
          \x20\x20\x20 extraNodeModules: {{ 'iex': '{}' }},\n\
          \x20 }},\n\
+         \x20 watcher: {{\n\
+         \x20\x20\x20 watchman: {{ enabled: false }},\n\
+         \x20\x20\x20 healthCheck: {{ enabled: false }},\n\
+         \x20 }},\n\
          }});\n",
+        shell_abs.display(),
         project_abs.display(),
         packages_iex.display(),
         packages_iex.display(),
     );
-    fs::write(gen.join("metro.config.generated.js"), metro_content).expect("cannot write metro.config.generated.js");
+    let metro_out = gen.join("metro.config.generated.js");
+    if fs::read_to_string(&metro_out).unwrap_or_default() != metro_content {
+        fs::write(&metro_out, metro_content).expect("cannot write metro.config.generated.js");
+    }
 
 }
