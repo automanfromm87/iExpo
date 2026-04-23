@@ -28,7 +28,8 @@ pub fn ensure_shell(cfg: &IexConfig) {
     "react-native": "{RN_VERSION}",
     "@react-native-community/cli": "^20.1.3",
     "@react-native-community/cli-platform-ios": "^20.1.3",
-    "@react-native/metro-config": "{RN_VERSION}"
+    "@react-native/metro-config": "{RN_VERSION}",
+    "@tanstack/react-query": "^5.0.0"
   }}
 }}"#)).unwrap();
 
