@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'iex/router';
 
 export const icon = 'H';
@@ -8,16 +7,13 @@ export const icon = 'H';
 export default function Home(): React.JSX.Element {
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <LinearGradient
-        colors={['#4c669f', '#3b5998', '#192f6a']}
-        style={styles.hero}
-      >
+      <View style={styles.hero}>
         <View style={styles.logoBox}>
           <Text style={styles.logoText}>iEx</Text>
         </View>
-        <Text style={[styles.title, { color: '#fff' }]}>iExpo</Text>
-        <Text style={[styles.subtitle, { color: 'rgba(255,255,255,0.7)' }]}>Instant React Native Development</Text>
-      </LinearGradient>
+        <Text style={styles.title}>iExpo</Text>
+        <Text style={styles.subtitle}>Instant React Native Development</Text>
+      </View>
 
       <View style={styles.cards}>
         <FeatureCard

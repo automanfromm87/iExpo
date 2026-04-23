@@ -1,7 +1,7 @@
 use std::fs;
 use std::process::Command;
 
-use crate::paths::shell_dir;
+use crate::paths::{shell_dir, rn_version};
 use crate::util::bundle_js;
 use crate::project::require_project_dir;
 use crate::shell::ensure_shell;
@@ -27,10 +27,11 @@ pub fn cmd_publish(server: &str, note: &str) {
 
     println!("2/2 Publishing to {}...", server);
 
+    let rv = rn_version();
     let url = if note.is_empty() {
-        format!("{}/publish?channel=production&runtime_version=0.76.9", server)
+        format!("{}/publish?channel=production&runtime_version={}", server, rv)
     } else {
-        format!("{}/publish?channel=production&runtime_version=0.76.9&note={}", server, note.replace(' ', "+"))
+        format!("{}/publish?channel=production&runtime_version={}&note={}", server, rv, note.replace(' ', "+"))
     };
 
     let output = Command::new("curl")

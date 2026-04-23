@@ -88,7 +88,7 @@ pub async fn publish_bundle(
     let hash = format!("{:x}", hasher.finalize());
 
     let channel = params.channel.unwrap_or_else(|| "production".to_string());
-    let runtime_version = params.runtime_version.unwrap_or_else(|| "0.76.9".to_string());
+    let runtime_version = params.runtime_version.unwrap_or_else(|| "unknown".to_string());
 
     let mut s = state.write().unwrap();
     let version = s.versions.last().map_or(1, |v| v.version + 1);

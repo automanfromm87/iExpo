@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
 
 fn default_channel() -> String { "production".to_string() }
-fn default_runtime() -> String { "0.76.9".to_string() }
+fn default_runtime() -> String { "unknown".to_string() }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Release {

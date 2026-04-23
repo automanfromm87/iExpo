@@ -19,11 +19,11 @@ pub fn ensure_shell() {
     fs::write(shell.join("package.json"), r#"{
   "name": "iexpo-shell", "version": "1.0.0", "private": true,
   "dependencies": {
-    "react": "18.3.1",
-    "react-native": "0.76.9",
-    "@react-native-community/cli": "15.1.3",
-    "@react-native-community/cli-platform-ios": "15.1.3",
-    "@react-native/metro-config": "0.76.9"
+    "react": "^19.2.3",
+    "react-native": "0.85.2",
+    "@react-native-community/cli": "^20.1.3",
+    "@react-native-community/cli-platform-ios": "^20.1.3",
+    "@react-native/metro-config": "0.85.2"
   }
 }"#).unwrap();
 
@@ -59,7 +59,7 @@ pub fn ensure_shell() {
     }
 
     println!("📱 Generating iOS project...");
-    run_cmd("npm", &["install", "@react-native-community/template@0.76.9", "--save-dev"], &shell);
+    run_cmd("npm", &["install", "@react-native-community/template@0.85.2", "--save-dev"], &shell);
 
     let template_ios = shell.join("node_modules/@react-native-community/template/template/ios");
     if template_ios.exists() {
@@ -77,6 +77,12 @@ pub fn ensure_shell() {
         ] {
             let src = ios_dir.join(from);
             if src.exists() { let _ = fs::rename(&src, ios_dir.join(to)); }
+        }
+
+        let scheme_file = ios_dir
+            .join("iExpoShell.xcodeproj/xcshareddata/xcschemes/HelloWorld.xcscheme");
+        if scheme_file.exists() {
+            let _ = fs::rename(&scheme_file, scheme_file.with_file_name("iExpoShell.xcscheme"));
         }
 
         println!("📦 pod install...");

@@ -31,15 +31,17 @@ pub fn configure_metro(project_dir: &Path) {
     }
 
     let watchman_config = project_abs.join(".watchmanconfig");
-    fs::write(&watchman_config, r#"{"ignore_dirs":["node_modules","build"]}"#)
-        .expect("cannot write .watchmanconfig");
+    let wm_content = r#"{"ignore_dirs":["node_modules","build"]}"#;
+    if fs::read_to_string(&watchman_config).unwrap_or_default() != wm_content {
+        fs::write(&watchman_config, wm_content).expect("cannot write .watchmanconfig");
+    }
 
     let shell = shell_dir();
     let shell_abs = fs::canonicalize(&shell).unwrap_or(shell);
     let metro_content = format!(
         "const {{getDefaultConfig, mergeConfig}} = require('@react-native/metro-config');\n\
          const path = require('path');\n\
-         const exclusionList = require('metro-config/src/defaults/exclusionList');\n\
+         const exclusionList = require('metro-config/private/defaults/exclusionList').default;\n\
          const shellDir = '{}';\n\
          module.exports = mergeConfig(getDefaultConfig(shellDir), {{\n\
          \x20 watchFolders: ['{}', '{}'],\n\
@@ -48,10 +50,7 @@ pub fn configure_metro(project_dir: &Path) {
          \x20\x20\x20 blockList: exclusionList([/apps\\/.*\\/node_modules\\/.*/]),\n\
          \x20\x20\x20 extraNodeModules: {{ 'iex': '{}' }},\n\
          \x20 }},\n\
-         \x20 watcher: {{\n\
-         \x20\x20\x20 watchman: {{ enabled: false }},\n\
-         \x20\x20\x20 healthCheck: {{ enabled: false }},\n\
-         \x20 }},\n\
+         \x20 watcher: {{ healthCheck: {{ enabled: false }} }},\n\
          }});\n",
         shell_abs.display(),
         project_abs.display(),

@@ -1,6 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 use std::sync::OnceLock;
+use serde_json;
 
 static ROOT: OnceLock<PathBuf> = OnceLock::new();
 
@@ -16,3 +17,15 @@ pub fn build_dir() -> PathBuf { iexpo_root().join("runtime").join("build") }
 pub fn apps_dir() -> PathBuf { iexpo_root().join("apps") }
 pub fn packages_dir() -> PathBuf { iexpo_root().join("packages") }
 pub fn generated_dir() -> PathBuf { shell_dir().join(".iex-generated") }
+
+pub fn rn_version() -> String {
+    let pkg = shell_dir().join("package.json");
+    if let Ok(content) = std::fs::read_to_string(&pkg) {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(v) = json["dependencies"]["react-native"].as_str() {
+                return v.trim_start_matches('^').trim_start_matches('~').to_string();
+            }
+        }
+    }
+    "0.85.2".to_string()
+}

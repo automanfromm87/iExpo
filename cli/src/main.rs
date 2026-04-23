@@ -9,8 +9,10 @@ mod publish;
 
 use clap::{Parser, Subcommand};
 use std::fs;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 
-use paths::{shell_dir, apps_dir};
+use paths::{shell_dir, build_dir, apps_dir};
 use util::run_cmd;
 use project::require_project_dir;
 use shell::{ensure_shell, build_shell, install_app};
@@ -34,6 +36,11 @@ enum Cmd {
     },
     /// Regenerate routes + metro config (while `iex run` is running)
     Sync,
+    /// Add a native package (npm install + pod install + clear build cache)
+    Add {
+        /// Package names (e.g. expo-haptics expo-camera)
+        packages: Vec<String>,
+    },
     /// Bundle JS + compile Release .app / .ipa
     Build {
         #[arg(long, help = "Build for Simulator instead of device")]
@@ -66,8 +73,8 @@ fn cmd_init(name: &str) {
         "version": "1.0.0",
         "main": "App.tsx",
         "devDependencies": {
-            "@types/react": "^18.3.0",
-            "react-native": "0.76.9",
+            "@types/react": "^19.1.0",
+            "react-native": "0.85.2",
             "typescript": "^5.0.0"
         }
     });
@@ -84,6 +91,26 @@ fn cmd_init(name: &str) {
     println!("   cd apps/{name} && iex run");
 }
 
+fn setup_watchman_shim() -> Option<PathBuf> {
+    let home = std::env::var("HOME").ok()?;
+    let bin_dir = PathBuf::from(&home).join(".iex").join("bin");
+    fs::create_dir_all(&bin_dir).ok()?;
+
+    let shim = bin_dir.join("watchman");
+    let script = "#!/bin/bash\nexit 1\n";
+
+    if fs::read_to_string(&shim).unwrap_or_default() != script {
+        fs::write(&shim, script).ok()?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&shim, fs::Permissions::from_mode(0o755)).ok()?;
+        }
+    }
+
+    Some(bin_dir)
+}
+
 fn start_metro() {
     println!();
     println!("🔥 Starting Metro dev server...");
@@ -91,7 +118,24 @@ fn start_metro() {
     println!();
 
     let shell = shell_dir();
-    run_cmd("npx", &["react-native", "start", "--port", "8081"], &shell);
+
+    let mut cmd = Command::new("npx");
+    cmd.args(["react-native", "start", "--port", "8081"])
+        .current_dir(&shell)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+
+    if let Some(bin_dir) = setup_watchman_shim() {
+        let path = format!(
+            "{}:{}",
+            bin_dir.display(),
+            std::env::var("PATH").unwrap_or_default()
+        );
+        cmd.env("PATH", path);
+    }
+
+    let _ = cmd.status();
 }
 
 fn main() {
@@ -121,6 +165,43 @@ fn main() {
             let cwd = require_project_dir();
             configure_metro(&cwd);
             println!("✅ Synced — Metro will reload automatically");
+        }
+        Cmd::Add { packages } => {
+            if packages.is_empty() {
+                eprintln!("Usage: iex add <package> [package...]");
+                std::process::exit(1);
+            }
+
+            let shell = shell_dir();
+            let ios_dir = shell.join("ios");
+
+            println!("📦 Installing {}...", packages.join(", "));
+            let mut args = vec!["install"];
+            for p in &packages {
+                args.push(p);
+            }
+            if !run_cmd("npm", &args, &shell) {
+                eprintln!("❌ npm install failed");
+                std::process::exit(1);
+            }
+
+            if ios_dir.join("Podfile").exists() {
+                println!("📦 Running pod install...");
+                if !run_cmd("pod", &["install"], &ios_dir) {
+                    eprintln!("❌ pod install failed");
+                    std::process::exit(1);
+                }
+            }
+
+            let build = build_dir();
+            if build.join("DerivedData").exists() {
+                println!("🗑  Clearing build cache...");
+                let _ = fs::remove_dir_all(build.join("DerivedData"));
+            }
+
+            println!();
+            println!("✅ Added: {}", packages.join(", "));
+            println!("   Run `iex run` to rebuild with the new native modules.");
         }
         Cmd::Build { sim } => build::cmd_build(sim),
         Cmd::Publish { server, note } => publish::cmd_publish(&server, &note),
