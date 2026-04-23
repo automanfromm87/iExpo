@@ -1,25 +1,27 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
-  SafeAreaView, StatusBar, useWindowDimensions,
+  SafeAreaView, StatusBar, useWindowDimensions, AppState,
 } from 'react-native';
 
 // ─── Types ───
 
-interface RouteMeta {
+export interface RouteMeta {
   title?: string;
   icon?: string;
   tab?: boolean;
   tabOrder?: number;
   headerShown?: boolean;
   statusBarStyle?: 'dark-content' | 'light-content';
+  presentation?: 'card' | 'modal';
+  gestureEnabled?: boolean;
 }
 
 interface Route {
   path: string;
   component: React.ComponentType<any>;
   meta: RouteMeta;
-  layout?: React.ComponentType<{ children: React.ReactNode }>;
+  layouts?: React.ComponentType<{ children: React.ReactNode }>[];
 }
 
 interface NavigationContext {
@@ -44,11 +46,13 @@ const NavContext = createContext<NavigationContext>({
 
 const LifecycleContext = createContext<PageLifecycle>({ isFocused: false });
 
-// ─── Hooks ───
+// ─── Navigation hooks ───
 
 export function useNavigation(): NavigationContext {
   return useContext(NavContext);
 }
+
+// ─── Page lifecycle hooks ───
 
 export function usePageFocus(callback: () => void | (() => void)): void {
   const { isFocused } = useContext(LifecycleContext);
@@ -72,6 +76,43 @@ export function usePageBlur(callback: () => void): void {
     }
     prev.current = isFocused;
   }, [isFocused]);
+}
+
+// ─── App lifecycle hooks ───
+
+export function useAppState(): 'active' | 'background' | 'inactive' | 'unknown' | 'extension' {
+  const [state, setState] = useState(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', setState);
+    return () => sub.remove();
+  }, []);
+  return state;
+}
+
+export function useAppForeground(callback: () => void): void {
+  const prev = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', next => {
+      if (next === 'active' && prev.current !== 'active') {
+        callback();
+      }
+      prev.current = next;
+    });
+    return () => sub.remove();
+  }, []);
+}
+
+export function useAppBackground(callback: () => void): void {
+  const prev = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', next => {
+      if (next === 'background' && prev.current === 'active') {
+        callback();
+      }
+      prev.current = next;
+    });
+    return () => sub.remove();
+  }, []);
 }
 
 // ─── Path matching ───
@@ -104,6 +145,19 @@ function findRoute(routes: Route[], path: string): { route: Route; params: Recor
   return null;
 }
 
+// ─── Layout nesting ───
+
+function wrapWithLayouts(
+  layouts: React.ComponentType<{ children: React.ReactNode }>[] | undefined,
+  page: React.JSX.Element,
+): React.JSX.Element {
+  if (!layouts || layouts.length === 0) return page;
+  return layouts.reduceRight<React.JSX.Element>(
+    (child, Layout) => <Layout>{child}</Layout>,
+    page,
+  );
+}
+
 // ─── Router ───
 
 interface RouterProps {
@@ -111,7 +165,7 @@ interface RouterProps {
 }
 
 export function Router({ routes }: RouterProps): React.JSX.Element {
-  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
 
   const tabRoutes = useMemo(
     () => routes
@@ -142,19 +196,26 @@ export function Router({ routes }: RouterProps): React.JSX.Element {
       setStack([{ path: match.route.path, params: mergedParams }]);
       slideAnim.setValue(0);
     } else {
-      slideAnim.setValue(SCREEN_WIDTH);
+      const isModal = match.route.meta?.presentation === 'modal';
+      const distance = isModal ? SCREEN_HEIGHT : SCREEN_WIDTH;
+      slideAnim.setValue(distance);
       setStack(prev => [...prev, { path, params: mergedParams }]);
       Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 65, friction: 11 }).start();
     }
-  }, [routes, tabPaths, slideAnim, SCREEN_WIDTH]);
+  }, [routes, tabPaths, slideAnim, SCREEN_WIDTH, SCREEN_HEIGHT]);
 
   const goBack = useCallback(() => {
     if (stack.length <= 1) return;
-    Animated.timing(slideAnim, { toValue: SCREEN_WIDTH, duration: 220, useNativeDriver: true }).start(() => {
+    const currentRoute = findRoute(routes, stack[stack.length - 1].path);
+    if (currentRoute?.route.meta?.gestureEnabled === false) return;
+
+    const isModal = currentRoute?.route.meta?.presentation === 'modal';
+    const distance = isModal ? SCREEN_HEIGHT : SCREEN_WIDTH;
+    Animated.timing(slideAnim, { toValue: distance, duration: 220, useNativeDriver: true }).start(() => {
       setStack(p => p.slice(0, -1));
       slideAnim.setValue(0);
     });
-  }, [stack.length, slideAnim, SCREEN_WIDTH]);
+  }, [stack, routes, slideAnim, SCREEN_WIDTH, SCREEN_HEIGHT]);
 
   if (!currentMatch) {
     return <SafeAreaView style={s.container}><Text style={s.err}>404 — {current.path}</Text></SafeAreaView>;
@@ -170,13 +231,13 @@ export function Router({ routes }: RouterProps): React.JSX.Element {
   const activeTabPath = stack[0].path;
   const stackRoute = canGoBack ? findRoute(routes, current.path) : null;
   const StackPage = stackRoute?.route.component;
-  const StackLayout = stackRoute?.route.layout;
+  const stackLayouts = stackRoute?.route.layouts;
+  const isModal = stackRoute?.route.meta?.presentation === 'modal';
 
   const pageContent = (
     <View style={s.screen}>
       {tabRoutes.map(route => {
         const isFocused = activeTabPath === route.path && !canGoBack;
-        const Layout = route.layout;
         const Page = route.component;
         return (
           <View
@@ -184,7 +245,7 @@ export function Router({ routes }: RouterProps): React.JSX.Element {
             style={[StyleSheet.absoluteFill, { display: activeTabPath === route.path ? 'flex' : 'none' }]}
           >
             <LifecycleContext.Provider value={{ isFocused }}>
-              {Layout ? <Layout><Page /></Layout> : <Page />}
+              {wrapWithLayouts(route.layouts, <Page />)}
             </LifecycleContext.Provider>
           </View>
         );
@@ -193,11 +254,11 @@ export function Router({ routes }: RouterProps): React.JSX.Element {
       {StackPage && canGoBack && (
         <Animated.View style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: '#f2f2f7' },
-          { transform: [{ translateX: slideAnim }] },
+          { backgroundColor: isModal ? 'rgba(0,0,0,0.4)' : '#f2f2f7' },
+          { transform: [isModal ? { translateY: slideAnim } : { translateX: slideAnim }] },
         ]}>
           <LifecycleContext.Provider value={{ isFocused: true }}>
-            {StackLayout ? <StackLayout><StackPage /></StackLayout> : <StackPage />}
+            {wrapWithLayouts(stackLayouts, <StackPage />)}
           </LifecycleContext.Provider>
         </Animated.View>
       )}

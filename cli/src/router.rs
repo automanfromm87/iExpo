@@ -11,23 +11,22 @@ use crate::util::write_if_changed;
 struct ScannedRoute {
     path: String,
     file: String,
-    layout: Option<String>,
+    layouts: Vec<String>,
 }
 
-fn scan_pages(dir: &Path, prefix: &str, layout: Option<&str>) -> Vec<ScannedRoute> {
+fn scan_pages(dir: &Path, prefix: &str, parent_layouts: &[String]) -> Vec<ScannedRoute> {
     let mut routes = Vec::new();
     let mut entries: Vec<_> = fs::read_dir(dir).into_iter().flatten().flatten().collect();
     entries.sort_by_key(|e| e.file_name());
 
-    let own_layout = dir.join("_layout.tsx");
-    let active_layout = if own_layout.exists() {
-        Some(own_layout.to_string_lossy().to_string())
-    } else if let Some(parent) = layout {
-        Some(parent.to_string())
-    } else {
-        let js_layout = dir.join("_layout.js");
-        if js_layout.exists() { Some(js_layout.to_string_lossy().to_string()) } else { None }
-    };
+    let mut layouts = parent_layouts.to_vec();
+    for ext in ["tsx", "ts", "jsx", "js"] {
+        let layout_file = dir.join(format!("_layout.{ext}"));
+        if layout_file.exists() {
+            layouts.push(layout_file.to_string_lossy().to_string());
+            break;
+        }
+    }
 
     for entry in entries {
         let path = entry.path();
@@ -37,7 +36,7 @@ fn scan_pages(dir: &Path, prefix: &str, layout: Option<&str>) -> Vec<ScannedRout
 
         if path.is_dir() && name != "node_modules" {
             let sub = if prefix.is_empty() { name.clone() } else { format!("{prefix}/{name}") };
-            routes.extend(scan_pages(&path, &sub, active_layout.as_deref()));
+            routes.extend(scan_pages(&path, &sub, &layouts));
             continue;
         }
 
@@ -61,7 +60,7 @@ fn scan_pages(dir: &Path, prefix: &str, layout: Option<&str>) -> Vec<ScannedRout
         routes.push(ScannedRoute {
             path: route_path,
             file: path.to_string_lossy().to_string(),
-            layout: active_layout.clone(),
+            layouts: layouts.clone(),
         });
     }
     routes
@@ -88,7 +87,7 @@ pub fn generate_router(project_abs: &Path, app_name: &str) {
     fs::create_dir_all(&gen).unwrap();
 
     let pages_dir = project_abs.join("pages");
-    let routes = scan_pages(&pages_dir, "", None);
+    let routes = scan_pages(&pages_dir, "", &[]);
 
     if routes.is_empty() {
         eprintln!("⚠️  pages/ directory is empty");
@@ -112,7 +111,7 @@ pub fn generate_router(project_abs: &Path, app_name: &str) {
             "import {var}, {{ meta as meta{i} }} from '{}';\n", r.file
         ));
 
-        let layout_ref = if let Some(ref lf) = r.layout {
+        let layout_refs: Vec<String> = r.layouts.iter().map(|lf| {
             let idx = layout_set.iter().position(|x| x == lf).unwrap_or_else(|| {
                 let idx = layout_set.len();
                 layout_imports.push_str(&format!("import Layout{idx} from '{lf}';\n"));
@@ -120,12 +119,12 @@ pub fn generate_router(project_abs: &Path, app_name: &str) {
                 idx
             });
             format!("Layout{idx}")
-        } else {
-            "undefined".to_string()
-        };
+        }).collect();
+
+        let layouts_str = format!("[{}]", layout_refs.join(", "));
 
         route_entries.push_str(&format!(
-            "  {{ path: '{}', component: {var}, meta: meta{i} || {{}}, layout: {layout_ref} }},\n",
+            "  {{ path: '{}', component: {var}, meta: meta{i} || {{}}, layouts: {layouts_str} }},\n",
             r.path
         ));
     }
