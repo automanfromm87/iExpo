@@ -1,5 +1,7 @@
 # How to Build Expo from Scratch
 
+> **Note**: This document was written during the initial development of iExpo with RN 0.76. The project has since evolved significantly — upgraded to RN 0.85/React 19, Rust CLI, file-system routing with layouts/dynamic routes, global state, React Query integration, etc. See `README.md` for the current state. This document is preserved as a historical record of the architecture and lessons learned.
+
 A complete technical guide to building an Expo-like development tool from zero. This document covers every layer of the architecture, every decision point, and every pitfall we encountered.
 
 ---
