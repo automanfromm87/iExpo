@@ -1,0 +1,10 @@
+{
+  "name": "iex",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/router.tsx",
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

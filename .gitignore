@@ -1,0 +1,39 @@
+# Build artifacts
+cli/target/
+bundled/target/
+bundled/bundles/
+
+# Node
+node_modules/
+package-lock.json
+
+# iOS build
+runtime/build/
+runtime/shell/ios/build/
+runtime/shell/ios/Pods/
+runtime/shell/ios/Podfile.lock
+
+# Generated files (created by iex run/build)
+runtime/shell/.iex-generated/
+runtime/shell/node_modules/
+runtime/shell/App.tsx
+runtime/shell/App.js
+runtime/shell/main.jsbundle
+runtime/shell/assets/
+runtime/shell/ota-bundle.jsbundle
+runtime/shell/ios/.xcode.env.local
+
+# App build output
+apps/*/build/
+apps/*/node_modules/
+apps/*/.watchmanconfig
+
+# OS
+.DS_Store
+*.swp
+*~
+
+# Old files (replaced)
+iexpo.sh
+runtime/shell/iex/
+runtime/shell/_pages

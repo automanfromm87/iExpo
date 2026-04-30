@@ -1,0 +1,14 @@
+{
+  "name": "myapp",
+  "version": "1.0.0",
+  "main": "App.tsx",
+  "scripts": {
+    "start": "iex run --no-build",
+    "run": "iex run"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "react-native": "0.85.2",
+    "typescript": "^5.9.3"
+  }
+}

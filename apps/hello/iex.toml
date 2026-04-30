@@ -1,0 +1,6 @@
+name = "hello"
+display_name = "Hello"
+bundle_id = "com.iexpo.hello"
+port = 8081
+icon = "👋"
+description = "A minimal Hello World app"

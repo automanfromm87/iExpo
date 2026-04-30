@@ -1,0 +1,6 @@
+name = "iExpoShell"
+display_name = "Tasks"
+bundle_id = "org.reactjs.native.example.iExpoShell"
+port = 8081
+icon = "📋"
+description = "Tasks — todo list demo"

@@ -1,0 +1,10 @@
+{
+  "name": "notes",
+  "version": "1.0.0",
+  "main": "pages/index.tsx",
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "react-native": "0.85.2",
+    "typescript": "^5.0.0"
+  }
+}
